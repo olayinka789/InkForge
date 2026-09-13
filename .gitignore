@@ -1,4 +1,185 @@
+# ==============================================================================
+# InkForge - Git Ignore Configuration (Node.js & Full-Stack Monorepo)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Dependencies & Package Managers
+# ------------------------------------------------------------------------------
 node_modules/
-dist/
+*/node_modules/
+jspm_packages/
+web_modules/
+bower_components/
+.npm/
+.pnp
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.yarn-integrity
+.pnpm-store/
+
+# ------------------------------------------------------------------------------
+# Environment Variables & Secrets (dotenv)
+# ------------------------------------------------------------------------------
 .env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+!backend/.env.example
+!frontend/.env.example
+.dev.vars
+
+# ------------------------------------------------------------------------------
+# Production Build & Compilation Artifacts
+# ------------------------------------------------------------------------------
+dist/
+dist-ssr/
+build/
+out/
+.next/
+.nuxt/
+*.local
+*.tsbuildinfo
+*.tgz
+
+# ------------------------------------------------------------------------------
+# Logs, Diagnostic Reports & Process IDs
+# ------------------------------------------------------------------------------
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+ngrok.log
+pids/
+*.pid
+*.seed
+*.pid.lock
+.node_repl_history
+
+# ------------------------------------------------------------------------------
+# Testing & Code Coverage
+# ------------------------------------------------------------------------------
+coverage/
+*.lcov
+.nyc_output/
+lib-cov/
+
+# ------------------------------------------------------------------------------
+# Linters, Formatters & Tool Caching
+# ------------------------------------------------------------------------------
+.eslintcache
+.prettiercache
+.stylelintcache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# ------------------------------------------------------------------------------
+# Security, SAST & DevSecOps Tool Artifacts
+# ------------------------------------------------------------------------------
+# SonarQube Scanner
+.scannerwork/
+.sonar/
+
+# Snyk
+.snyk
+
+# Trivy Vulnerability Scanner Cache
+.trivy/
+
+# OWASP ZAP Outputs
+zap.out
+zap_report.*
+.zap/
+
+# Gitleaks Reports
+gitleaks-report.json
+.gitleaks/
+
+# ------------------------------------------------------------------------------
+# Docker & Containers
+# ------------------------------------------------------------------------------
+docker-compose.override.yml
+.docker/
+
+# ------------------------------------------------------------------------------
+# Databases & Local Storage
+# ------------------------------------------------------------------------------
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+# Preserve database initialization scripts
+!database/init.sql
+
+# ------------------------------------------------------------------------------
+# Operating System Files
+# ------------------------------------------------------------------------------
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+# ------------------------------------------------------------------------------
+# IDEs, Editors & Workspaces
+# ------------------------------------------------------------------------------
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+.history/
+.vscode-test/
+
+# JetBrains / IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Vim / Emacs
+*.swp
+*.swo
+*.swn
+*.un~
+.#*
+#*#
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# Temporary Files & Caches
+# ------------------------------------------------------------------------------
+.cache/
+.parcel-cache/
+.temp/
+tmp/
+temp/

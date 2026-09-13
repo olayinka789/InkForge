@@ -1,0 +1,204 @@
+name: InkForge DevSecOps Pipeline
+on:
+  pull_request: 
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+  
+permissions:
+  contents: read  
+  packages: write   
+  issues: write    
+
+jobs:
+  run-linters:
+    name: linters
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Git repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24 
+
+      - name: Install Node.js dependencies
+        run: npm install --prefix frontend
+
+      - name: Run linters
+        uses: wearerequired/lint-action@v3
+        with:
+          eslint: true
+          prettier: true
+          eslint_dir: "frontend"
+          prettier_dir: "frontend"
+
+  secret-scanning:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast-scan: 
+    name: SonarQube
+    runs-on: self-hosted  
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v8.2.1
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: 'http://localhost:9000' 
+          SONAR_SCANNER_JRES_PROVISIONING: 'false'
+        with:
+          args: >
+            -Dsonar.projectKey=inkforge-blog
+            -Dsonar.projectName=InkForge-Blog
+            -Dsonar.sources=.
+            -Dsonar.exclusions=**/node_modules/**,**/dist/**,backend/node_modules/**,frontend/node_modules/**
+
+  sca-snyk:
+    name: Snyk
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run Snyk to check for vulnerabilities
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
+  container-scan:
+    name: Trivy & Push to ACR
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Log in to ACR
+        run: |
+          az acr login --name inkforgeregistry
+
+      - name: Build frontend and backend images
+        run: |
+          docker build -f frontend/Dockerfile -t inkforgeregistry.azurecr.io/my-app-frontend:${{ github.sha }} frontend
+          docker build -f backend/Dockerfile -t inkforgeregistry.azurecr.io/my-app-backend:${{ github.sha }} backend
+
+      - name: Run Trivy vulnerability scanner on frontend image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'inkforgeregistry.azurecr.io/my-app-frontend:${{ github.sha }}'
+          format: 'table'
+          exit-code: '0'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL'
+
+      - name: Push Images to ACR
+        run: |
+          docker push inkforgeregistry.azurecr.io/my-app-frontend:${{ github.sha }}
+          docker push inkforgeregistry.azurecr.io/my-app-backend:${{ github.sha }}
+
+  deploy_staging:
+    name: staging deployment
+    needs: container-scan
+    runs-on: self-hosted  
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare environment file
+        run: |
+          if [ ! -f .env ]; then cp .env.example .env; fi
+
+      - name: Deploy application to staging
+        run: docker compose up -d --build
+
+      - name: Wait for application
+        run: sleep 20
+
+      - name: Check application health
+        run: curl --fail http://localhost:8080/
+
+      - name: Show running containers
+        run: docker compose ps
+
+      - name: Start ngrok Tunnel
+        run: |
+          # Use pkill with -f to safely find and terminate running ngrok processes on macOS
+          pkill -f ngrok || true
+          
+          # Run ngrok completely detached with explicit dev/null routing to keep the Mac shell from blocking
+          nohup ngrok http --domain=relieve-mule-relieving.ngrok-free.dev 8080 > /dev/null 2>&1 &
+          
+          # Give the tunnel plenty of time to establish its handshake connection
+          sleep 20
+
+
+  dast-scan:
+    name: owasp zap scan
+    needs: deploy_staging
+    runs-on: ubuntu-latest  
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: ZAP Scan
+        uses: zaproxy/action-full-scan@v0.13.0
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          docker_name: 'ghcr.io/zaproxy/zaproxy:stable'
+          target: 'https://azurecontainerapps.io' 
+          cmd_options: '-a'
+
+  deploy_prod:
+    name: Production Deployment to Azure
+    needs: dast-scan  
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+       
+          # Deploy Frontend
+      - name: Deploy Frontend Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:       
+          imageToDeploy: inkforgeregistry.azurecr.io/my-app-frontend:${{ github.sha }}
+          acrName: inkforgeregistry         
+          containerAppName: inkforge-blog-frontend        
+          resourceGroup: inkforge-resources   
+          targetPort: 8080
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}
+
+      # Deploy Backend
+      - name: Deploy Backend Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:       
+          imageToDeploy: inkforgeregistry.azurecr.io/my-app-backend:${{ github.sha }}
+          acrName: inkforgeregistry         
+          containerAppName: inkforge-blog-backend         
+          resourceGroup: inkforge-resources   
+          targetPort: 4000
+          registryUsername: ${{ secrets.ACR_USERNAME }}
+          registryPassword: ${{ secrets.ACR_PASSWORD }}

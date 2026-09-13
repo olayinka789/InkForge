@@ -558,6 +558,23 @@ The frontend container uses custom Nginx configuration (`frontend/nginx.conf`):
 - Directs static files and client-side routes to `/index.html` via `try_files $uri $uri/ /index.html`.
 - Proxies `/api/` calls seamlessly to the backend service.
 
+> [!IMPORTANT]
+> **Configuring the Backend Proxy URL (`nginx.conf`)**:
+> In [`frontend/nginx.conf`](frontend/nginx.conf), the `/api/` location block contains a placeholder:
+> ```nginx
+> location /api/ {
+>     proxy_pass <BACKEND_URL>;
+>     proxy_http_version 1.1;
+>     proxy_ssl_server_name on;
+> 
+>     proxy_set_header Host $proxy_host;
+>     proxy_set_header X-Real-IP $remote_addr;
+>     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+>     proxy_set_header X-Forwarded-Proto $scheme;
+> }
+> ```
+> **`<BACKEND_URL>` should be changed to the respective deployed production backend URL** (for example, `https://inkforge-blog-backend.<region>.azurecontainerapps.io/` or your internal network address `http://backend:4000/`) prior to building or releasing the production frontend container.
+
 ---
 
 ## Contributing

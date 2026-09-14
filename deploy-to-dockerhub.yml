@@ -1,0 +1,24 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+steps:
+- task: Docker@2
+  inputs:
+    containerRegistry: 'docker-service-connection'
+    repository: 'inkforge-frontend'
+    command: 'buildAndPush'
+    Dockerfile: '$(Build.)SourcesDirectory/frontend/Dockerfile'
+- task: Docker@2
+  inputs:
+    containerRegistry: 'docker-service-connection'
+    repository: 'inkforge-backend'
+    command: 'buildAndPush'
+    Dockerfile: '$(Build.)SourcesDirectory/backend/Dockerfile'

@@ -13,12 +13,12 @@ steps:
 - task: Docker@2
   inputs:
     containerRegistry: 'docker-service-connection'
-    repository: 'inkforge-frontend'
+    repository: 'olayinka789/inkforge-frontend'
     command: 'buildAndPush'
     Dockerfile: '$(Build.SourcesDirectory)/frontend/Dockerfile'
 - task: Docker@2
   inputs:
     containerRegistry: 'docker-service-connection'
-    repository: 'inkforge-backend'
+    repository: 'olayinka789/inkforge-backend'
     command: 'buildAndPush'
     Dockerfile: '$(Build.SourcesDirectory)/backend/Dockerfile'
